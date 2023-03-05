@@ -1,14 +1,13 @@
-defmodule PythonEx.MixProject do
+defmodule TestProj.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :python_ex,
+      app: :test_proj,
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      compilers: Mix.compilers(),
+      deps: deps()
       python_bin: "python3.10"
     ]
   end
@@ -23,8 +22,9 @@ defmodule PythonEx.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:"yt-dlp", compile: "mix python_ex.pip yt-dlp==2023.3.4", only: :test},
-      {:numpy, compile: "mix python_ex.pip numpy", only: :test}
+      {:python_ex, path: "..\.."}
+      {:"yt-dlp", compile: "mix python_ex.pip yt-dlp==2023.3.4"},
+      {:"numpy", compile: "mix python_ex.pip numpy"}
     ]
   end
 end

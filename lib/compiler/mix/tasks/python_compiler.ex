@@ -1,10 +1,17 @@
 defmodule Mix.Tasks.Compile.Python do
+  @moduledoc """
+  Create a Python venv and install dependencies via pip.
+  pip depencies are declared in `python_depencies/0` in `mix.exs`.
+  """
+
   use Mix.Task.Compiler
 
   @source_path "python_source"
   @bin_dir Path.join(Mix.Project.app_path(), "python")
 
   def run(_args) do
+    Mix.Project.pop()
+
     # Hard coded to 3.11 for now, might make it variable later.
 
     source = Path.join(Mix.Project.app_path(), @source_path)
@@ -20,7 +27,7 @@ defmodule Mix.Tasks.Compile.Python do
 
     File.mkdir(@bin_dir)
 
-    case IO.inspect(Mix.env()) do
+    case Mix.env() do
       _ ->
         with {_, 0} <-
                System.cmd(
