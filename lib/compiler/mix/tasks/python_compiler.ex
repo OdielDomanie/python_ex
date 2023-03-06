@@ -6,49 +6,42 @@ defmodule Mix.Tasks.Compile.Python do
 
   use Mix.Task.Compiler
 
-  @source_path "python_source"
-  @bin_dir Path.join(Mix.Project.app_path(), "python")
+  @venv_dir Path.join(Mix.Project.app_path(), "venv")
 
+  # Compiler must return {:ok | :noop | :error, [diagnostic]}
+  # TODO: return better
   def run(_args) do
-    Mix.Project.pop()
+    config = Mix.Project.config()
 
-    # Hard coded to 3.11 for now, might make it variable later.
-
-    source = Path.join(Mix.Project.app_path(), @source_path)
-    File.mkdir(source)
-
-    System.cmd("wget", ["https://www.python.org/ftp/python/3.10.10/Python-3.10.10.tgz"],
-      cd: source
-    )
-
-    System.cmd("tar", ["xf", "Python-3.10.10.tgz", "-C", source, "--strip-components=1"],
-      cd: source
-    )
-
-    File.mkdir(@bin_dir)
-
-    case Mix.env() do
-      _ ->
-        with {_, 0} <-
-               System.cmd(
-                 Path.join(source, "configure"),
-                 ["--with-ensurepip=install", "--prefix=" <> @bin_dir],
-                 cd: source
-               ),
-             {_, 0} <- System.cmd("make", ["-s", "-j"], cd: source),
-             {_, 0} <- System.cmd("make", ["install"], cd: source) do
-          :ok
-        else
-          {out, code} = error ->
-            %Mix.Task.Compiler.Diagnostic{
-              compiler_name: "Python",
-              details: error,
-              file: __ENV__.file,
-              message: inspect(out),
-              position: 0,
-              severity: :error
-            }
-        end
+    with {_, 0} <-
+           config
+           |> Keyword.fetch!(:python_bin)
+           |> System.cmd(["-m", "venv", @venv_dir], stderr_to_stdout: true),
+         python = Path.join(@venv_dir, "bin/python"),
+         {_, 0} <-
+           System.cmd(
+             python,
+             ["-m", "pip", "install", "-y", "-U" | Keyword.fetch!(config, :pip_deps)],
+             stderr_to_stdout: true
+           ) do
+      {:ok, []}
+    else
+      {out, ret} ->
+        {:error,
+         [
+           %Mix.Task.Compiler.Diagnostic{
+             compiler_name: "Python",
+             details: ret,
+             file: __ENV__.file,
+             message: inspect(out),
+             position: 0,
+             severity: :error
+           }
+         ]}
     end
+  end
+
+  def clean do
+    File.rmdir(@venv_dir)
   end
 end
