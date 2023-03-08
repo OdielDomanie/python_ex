@@ -8,7 +8,7 @@ defmodule PythonEx.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      compilers: Mix.compilers(),
+      compilers: Mix.compilers() ++ [:python],
       python_bin: "python3.10"
     ]
   end
@@ -16,12 +16,14 @@ defmodule PythonEx.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      mod: {Python, []}
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
-    []
+    [
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
+    ]
   end
 end

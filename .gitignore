@@ -24,3 +24,5 @@ python_ex-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+*.pyc

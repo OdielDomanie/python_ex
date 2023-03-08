@@ -3,7 +3,10 @@ defmodule TestApp do
 
   use Application
 
+  @impl true
   def start(_, _) do
-    Python.call(:test_script, :test, "hello")
+    priv_dir = :code.priv_dir(:test_app) |> to_string()
+    Python.apply(priv_dir, :test_script, :test_fun, "hello")
+    {:ok, self()}
   end
 end
