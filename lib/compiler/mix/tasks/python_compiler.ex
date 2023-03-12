@@ -7,21 +7,34 @@ defmodule Mix.Tasks.Compile.Python do
 
   use Mix.Task.Compiler
 
-  @venv_dir Path.join(Mix.Project.app_path(), "venv")
+  @venv_dir Path.join(Mix.Project.build_path(), "venv")
+  Mix.Project.app_path()
   @python Path.join(@venv_dir, "bin/python")
   @manifest Path.join(@venv_dir, "python_from")
+  @python_bin System.get_env("PYTHON", "python") |> System.find_executable()
 
   def python_path, do: @python
 
   # Compiler must return {:ok | :noop | :error, [diagnostic]}
   def run(_args) do
-    python_bin = Keyword.fetch!(Mix.Project.config(), :python_bin)
+    python_bin = @python_bin
 
-    if File.exists?(@python) && {:ok, python_bin} == File.read(@manifest) do
+    with {ok, diag} when (ok == :ok or ok == :noop) <- create_or_skip_venv(),
+         {ok, diag} when (ok == :ok or ok == :noop) <- {ok, diag_pip} = pip_install();
+            {ok, diag_pip ++ diag} do
+              {ok, diag}
+            end
+
+    unless File.exists?(@python) && {:ok, python_bin} == File.read(@manifest) do
+      create_venv()
       {:noop, []}
     else
-      do_compile()
-      File.write(@manifest, python_bin)
+      with {:ok, d} <- do_compile() do
+        :ok = File.write(@manifest, python_bin)
+        {:ok, d}
+      else
+        err -> err
+      end
     end
   end
 
@@ -56,11 +69,12 @@ defmodule Mix.Tasks.Compile.Python do
         {"", 0}
 
       deps when is_list(deps) ->
-        System.cmd(
-          @python,
-          ["-m", "pip", "install", "-y", "-U", "pip", "wheel", "setuptools"],
-          stderr_to_stdout: true
-        )
+        _ =
+          System.cmd(
+            @python,
+            ["-m", "pip", "install", "-y", "-U", "pip", "wheel", "setuptools"],
+            stderr_to_stdout: true
+          )
 
         System.cmd(
           @python,

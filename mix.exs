@@ -8,8 +8,8 @@ defmodule PythonEx.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      compilers: Mix.compilers() ++ [:python],
-      python_bin: "python3.10"
+      compilers: Mix.compilers() ++ [:python]
+      # python_bin: "python3.10"
     ]
   end
 
