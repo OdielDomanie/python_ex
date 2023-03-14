@@ -8,13 +8,12 @@ defmodule PythonExTest do
     assert {_out, 0} =
              System.cmd("mix", ["deps.clean", "--all"], cd: test_app_dir, stderr_to_stdout: true)
 
+    assert {_out, 0} = System.cmd("mix", ["deps.get"], cd: test_app_dir, stderr_to_stdout: true)
+
     # What is the proper return code?
     assert {_out, _ret} = System.cmd("mix", ["compile"], cd: test_app_dir, stderr_to_stdout: true)
 
     assert {"hellohello", 0} ==
-             System.cmd("elixir", ["--sname", "test", "-S", "mix", "run"],
-               cd: test_app_dir,
-               stderr_to_stdout: true
-             )
+             System.cmd("elixir", ["--sname", "test", "-S", "mix", "run"], cd: test_app_dir)
   end
 end

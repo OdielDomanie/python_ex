@@ -17,71 +17,107 @@ defmodule Mix.Tasks.Compile.Python do
 
   # Compiler must return {:ok | :noop | :error, [diagnostic]}
   def run(_args) do
-    python_bin = @python_bin
+    with {ok_venv, diag} when ok_venv == :ok or ok_venv == :noop <- create_or_skip_venv(),
+         {ok_pip, diag_pip} = pip_install(),
+         {ok_pip, diag} when ok_pip == :ok or ok_pip == :noop <- {ok_pip, diag_pip ++ diag} do
+      ok = if ok_venv == :noop and ok_pip == :noop, do: :noop, else: :ok
+      {ok, diag}
+    else
+      {:error, diag} -> {:error, diag}
+    end
+  end
 
-    with {ok, diag} when (ok == :ok or ok == :noop) <- create_or_skip_venv(),
-         {ok, diag} when (ok == :ok or ok == :noop) <- {ok, diag_pip} = pip_install();
-            {ok, diag_pip ++ diag} do
-              {ok, diag}
-            end
-
-    unless File.exists?(@python) && {:ok, python_bin} == File.read(@manifest) do
-      create_venv()
+  defp create_or_skip_venv() do
+    if venv_uptodate?() do
       {:noop, []}
     else
-      with {:ok, d} <- do_compile() do
-        :ok = File.write(@manifest, python_bin)
-        {:ok, d}
-      else
-        err -> err
-      end
+      _ = clean()
+      create_venv()
     end
   end
 
-  defp do_compile() do
-    config = Mix.Project.config()
-    python_bin = Keyword.fetch!(config, :python_bin)
+  defp venv_uptodate?() do
+    File.exists?(@python) and {:ok, @python_bin} == File.read(@manifest)
+  end
 
-    _ = clean()
+  defp create_venv() do
+    case System.cmd(@python_bin, ["-m", "venv", @venv_dir], stderr_to_stdout: true) do
+      {_, 0} ->
+        :ok = File.write(@manifest, @python_bin)
+        {:ok, []}
 
-    with {_, 0} <- System.cmd(python_bin, ["-m", "venv", @venv_dir], stderr_to_stdout: true),
-         {_, 0} <- install_pip_pckgs(config) do
-      {:ok, []}
-    else
       {out, ret} ->
-        {:error,
-         [
-           %Mix.Task.Compiler.Diagnostic{
-             compiler_name: "Python",
-             details: ret,
-             file: Mix.Project.project_file(),
-             message: inspect(out),
-             position: 0,
-             severity: :error
-           }
-         ]}
+        errdiag_from_cmd({out, ret})
     end
   end
 
-  defp install_pip_pckgs(config) do
-    case Keyword.get(config, :pip_deps) do
+  defp pip_install() do
+    case Mix.Project.config() |> Keyword.get(:pip_deps) do
       nil ->
-        {"", 0}
+        {:noop, []}
 
       deps when is_list(deps) ->
         _ =
           System.cmd(
             @python,
-            ["-m", "pip", "install", "-y", "-U", "pip", "wheel", "setuptools"],
-            stderr_to_stdout: true
+            ["-m", "pip", "install", "-U", "pip", "wheel", "setuptools"]
           )
 
-        System.cmd(
-          @python,
-          ["-m", "pip", "install", "-y", "-U" | Keyword.fetch!(config, :pip_deps)],
-          stderr_to_stdout: true
-        )
+        pip_install_deps()
     end
+  end
+
+  defp pip_install_deps() do
+    {out, ret} =
+      System.cmd(
+        @python,
+        [
+          "-m",
+          "pip",
+          "install",
+          "--quiet",
+          "--report",
+          "-",
+          "-U"
+          | Mix.Project.config() |> Keyword.fetch!(:pip_deps)
+        ],
+        stderr_to_stdout: true
+      )
+
+    case {out, ret} do
+      {out_json, 0} ->
+        new_installs?(out_json)
+
+      {out, ret} ->
+        errdiag_from_cmd({out, ret})
+    end
+  end
+
+  defp new_installs?(json) do
+    %{
+      "version" => "1",
+      "install" => installs
+    } = Jason.decode!(json)
+
+    if installs == [] do
+      {:noop, []}
+    else
+      {:ok, []}
+    end
+  end
+
+  defp errdiag_from_cmd({out, ret}) do
+    {:error,
+     [
+       %Mix.Task.Compiler.Diagnostic{
+         compiler_name: "Python",
+         details: inspect(out),
+         file: Mix.Project.project_file(),
+         message: "venv returns #{ret}",
+         position: 0,
+         severity: :error
+       }
+     ]}
   end
 
   def manifests, do: [@manifest]

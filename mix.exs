@@ -23,6 +23,7 @@ defmodule PythonEx.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:jason, "~> 1.4"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end
