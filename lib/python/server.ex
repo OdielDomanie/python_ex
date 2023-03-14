@@ -1,6 +1,6 @@
 defmodule Python.Server do
   @moduledoc """
-  Genserver that spins up a python server and handles messaging.
+  Genserver that spins up a Python server and handles messaging.
   """
   use GenServer
 
