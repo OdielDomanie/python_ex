@@ -9,7 +9,6 @@ defmodule PythonEx.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: Mix.compilers() ++ [:python]
-      # python_bin: "python3.10"
     ]
   end
 
@@ -23,7 +22,7 @@ defmodule PythonEx.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:jason, "~> 1.4"},
+      {:jason, "~> 1.4", runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end
