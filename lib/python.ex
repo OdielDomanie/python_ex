@@ -13,12 +13,16 @@ defmodule Python do
     Supervisor.start_link(children, strategy: :one_for_all)
   end
 
-  @spec apply(binary(), atom(), atom(), binary(), GenServer.server(), timeout(), timeout()) ::
+  @spec apply(binary(), atom(), atom(), binary(), GenServer.server(), keyword()) ::
           binary()
   @doc """
   Run a python function in the `module_path`.
   Takes a single `binary` argument that is passed to the python
   function `(bytes) -> bytes`.
+
+  `queue_timeout` is the timeout for this `apply/4/5/6` function.
+
+  `py_timeout` is per the call to the Python function.
   """
   def apply(
         path,
@@ -26,9 +30,13 @@ defmodule Python do
         fun,
         arg,
         python_server \\ Python.Server,
-        queue_timeout \\ :infinity,
-        py_timeout \\ 5000
+        opts \\ [
+          queue_timeout: :infinity,
+          py_timeout: 5000
+        ]
       ) do
+    queue_timeout = Keyword.get(opts, :queue_timeout, :infinity)
+    py_timeout = Keyword.get(opts, :py_timeout, 5000)
     GenServer.call(python_server, {:apply, {path, module, fun, arg, py_timeout}}, queue_timeout)
   end
 end
