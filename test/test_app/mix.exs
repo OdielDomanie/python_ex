@@ -8,7 +8,7 @@ defmodule TestProj.MixProject do
       elixir: "~> 1.14",
       start_permanent: false,
       deps: deps(),
-      compilers: Mix.compilers() ++ [:python],
+      compilers: Mix.compilers() ++ [:pip_deps],
       # python_bin: "python3.10",
       pip_deps: pip_deps()
     ]

@@ -1,30 +1,16 @@
 defmodule Mix.Tasks.Compile.Python do
-  @moduledoc """
-  Create a Python venv and install dependencies via pip.
-  `mix.exs` should have two more keys
-  `:python_bin` and `:pip_deps`.
-  """
+  @moduledoc false
 
   use Mix.Task.Compiler
 
-  @venv_dir Path.join(Mix.Project.build_path(), "venv")
-  Mix.Project.app_path()
-  @python Path.join(@venv_dir, "bin/python")
-  @manifest Path.join(@venv_dir, "python_from")
-  @python_bin System.get_env("PYTHON", "python") |> System.find_executable()
-
-  def python_path, do: @python
+  def venv_dir, do: Path.join(Mix.Project.build_path(), "venv")
+  def python, do: Path.join(venv_dir(), "bin/python")
+  defp manifest, do: Path.join(venv_dir(), "python_from")
+  def python_bin, do: System.get_env("PYTHON", "python") |> System.find_executable()
 
   # Compiler must return {:ok | :noop | :error, [diagnostic]}
   def run(_args) do
-    with {ok_venv, diag} when ok_venv == :ok or ok_venv == :noop <- create_or_skip_venv(),
-         {ok_pip, diag_pip} = pip_install(),
-         {ok_pip, diag} when ok_pip == :ok or ok_pip == :noop <- {ok_pip, diag_pip ++ diag} do
-      ok = if ok_venv == :noop and ok_pip == :noop, do: :noop, else: :ok
-      {ok, diag}
-    else
-      {:error, diag} -> {:error, diag}
-    end
+    create_or_skip_venv()
   end
 
   defp create_or_skip_venv() do
@@ -37,72 +23,17 @@ defmodule Mix.Tasks.Compile.Python do
   end
 
   defp venv_uptodate?() do
-    File.exists?(@python) and {:ok, @python_bin} == File.read(@manifest)
+    File.exists?(python()) and {:ok, python_bin()} == File.read(manifest())
   end
 
   defp create_venv() do
-    case System.cmd(@python_bin, ["-m", "venv", @venv_dir], stderr_to_stdout: true) do
+    case System.cmd(python_bin(), ["-m", "venv", venv_dir()], stderr_to_stdout: true) do
       {_, 0} ->
-        :ok = File.write(@manifest, @python_bin)
+        :ok = File.write(manifest(), python_bin())
         {:ok, []}
 
       {out, ret} ->
         errdiag_from_cmd({out, ret})
-    end
-  end
-
-  defp pip_install() do
-    case Mix.Project.config() |> Keyword.get(:pip_deps) do
-      nil ->
-        {:noop, []}
-
-      deps when is_list(deps) ->
-        _ =
-          System.cmd(
-            @python,
-            ["-m", "pip", "install", "-U", "pip", "wheel", "setuptools"]
-          )
-
-        pip_install_deps()
-    end
-  end
-
-  defp pip_install_deps() do
-    {out, ret} =
-      System.cmd(
-        @python,
-        [
-          "-m",
-          "pip",
-          "install",
-          "--quiet",
-          "--report",
-          "-",
-          "-U"
-          | Mix.Project.config() |> Keyword.fetch!(:pip_deps)
-        ],
-        stderr_to_stdout: true
-      )
-
-    case {out, ret} do
-      {out_json, 0} ->
-        new_installs?(out_json)
-
-      {out, ret} ->
-        errdiag_from_cmd({out, ret})
-    end
-  end
-
-  defp new_installs?(json) do
-    %{
-      "version" => "1",
-      "install" => installs
-    } = Jason.decode!(json)
-
-    if installs == [] do
-      {:noop, []}
-    else
-      {:ok, []}
     end
   end
 
@@ -120,9 +51,9 @@ defmodule Mix.Tasks.Compile.Python do
      ]}
   end
 
-  def manifests, do: [@manifest]
+  def manifests, do: [manifest()]
 
   def clean() do
-    File.rmdir(@venv_dir)
+    File.rmdir(venv_dir())
   end
 end
