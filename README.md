@@ -13,13 +13,13 @@ Python.apply(priv_dir, :my_python_module, :my_echo_fun, "hello")
 ## Installation
 (Coming soon)
 ~~If [available in Hex](https://hex.pm/docs/publish), the package can be installed~~
-by adding `python_ex` to your list of dependencies, and `:python` to the tail of the list of compilers in `mix.exs`:
+by adding `python_ex` to your list of dependencies, and optionally `:pip_deps` to the tail of the list of compilers in `mix.exs`:
 
 ```elixir
 def project do
     [
       ...
-      compilers: Mix.compilers() ++ [:python],
+      compilers: Mix.compilers() ++ [:pip_deps],
       pip_deps: pip_deps()
     ]
 end
