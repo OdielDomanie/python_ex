@@ -2,18 +2,18 @@ defmodule PythonExTest do
   use ExUnit.Case
   doctest Python
 
-  test "project creates venv and installs deps via pip" do
-    test_app_dir = Path.join(__DIR__, "test_app")
+  test "run a python function" do
+    venv_path = Mix.Project.build_path() |> Path.join("test_pyvenv")
 
-    assert {_out, 0} =
-             System.cmd("mix", ["deps.clean", "--all"], cd: test_app_dir, stderr_to_stdout: true)
+    {:ok, _sv_pid} =
+      Python.start(nil,
+        pip_pckgs: ["yt-dlp==2023.3.4", "numpy"],
+        venv_path: venv_path
+      )
 
-    assert {_out, 0} = System.cmd("mix", ["deps.get"], cd: test_app_dir, stderr_to_stdout: true)
+    test_dir = "test"
 
-    # What is the proper return code?
-    assert {_out, _ret} = System.cmd("mix", ["compile"], cd: test_app_dir, stderr_to_stdout: true)
-
-    assert {"hellohello", 0} ==
-             System.cmd("elixir", ["--sname", "test", "-S", "mix", "run"], cd: test_app_dir)
+    assert "hellohello" ==
+             Python.apply(test_dir, :test_script, :test_fun, "hello")
   end
 end

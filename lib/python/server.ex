@@ -4,21 +4,22 @@ defmodule Python.Server do
   """
   use GenServer
 
-  def python_path, do: Mix.Tasks.Compile.Python.python()
+  # def python_path, do: Mix.Tasks.PythonSetup.python()
   @bridge_script :code.priv_dir(:python_ex) |> Path.join("bridge.py")
 
   @doc false
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, nil, opts ++ [name: __MODULE__])
+    GenServer.start_link(__MODULE__, opts[:venv_dir], opts ++ [name: __MODULE__])
   end
 
   # Server (callbacks)
 
   @impl true
-  def init(_) do
+  def init(venv_dir) do
+    python_path = venv_dir |> Mix.Tasks.PythonSetup.python_path()
     # Messages are preceded by msg length (4 bytes, big-endian)
     python_port =
-      Port.open({:spawn_executable, python_path()}, [
+      Port.open({:spawn_executable, python_path}, [
         :binary,
         :use_stdio,
         args: [@bridge_script],
@@ -43,11 +44,6 @@ defmodule Python.Server do
       Port.command(port, "a" <> arg)
 
       receive do
-        # "r" <> result ->
-        #   Port.connect(port, parent_pid)
-        #   :erlang.unlink(port)
-        #   result
-
         {port, {:data, "r" <> result}} ->
           Port.connect(port, parent_pid)
           :erlang.unlink(port)
