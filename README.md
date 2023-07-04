@@ -16,24 +16,9 @@ Python.apply(priv_dir, :my_python_module, :my_echo_fun, "hello")
 by adding `python_ex` to your list of dependencies, and optionally `:pip_deps` to the tail of the list of compilers in `mix.exs`:
 
 ```elixir
-def project do
-    [
-      ...
-      compilers: Mix.compilers() ++ [:pip_deps],
-      pip_deps: pip_deps()
-    ]
-end
-
 def deps do
   [
     {:python_ex, "~> 0.1.0"}
-  ]
-end
-
-# Optional
-defp pip_deps do
-  [
-    "numpy>=1.24"
   ]
 end
 ```
@@ -42,8 +27,6 @@ end
 
 ~~Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc) and published on [HexDocs](https://hexdocs.pm).~~
 Once published, the docs can be found at <https://hexdocs.pm/python_ex>.
-
-When compiled for the first time, PythonEx generates a Python virtual environment inside the Mix build directory, using the `PYTHON` environment variable (`python` by default) as the source Python binary.
 
 When run, the PythonEx app automatically spins up a Python server that handles calls.
 
