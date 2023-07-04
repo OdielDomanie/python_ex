@@ -9,8 +9,14 @@ defmodule Python.Server do
 
   @doc false
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts[:venv_dir], opts ++ [name: __MODULE__])
+    GenServer.start_link(
+      __MODULE__,
+      opts[:venv_dir],
+      opts ++ [name: __MODULE__]
+    )
   end
+
+  defdelegate python_path(venv_dir), to: Mix.Tasks.PythonSetup
 
   # Server (callbacks)
 
