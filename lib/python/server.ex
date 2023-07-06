@@ -2,6 +2,8 @@ defmodule Python.Server do
   @moduledoc """
   Genserver that spins up a Python server and handles messaging.
   """
+  alias Mix.Tasks.PythonSetup
+
   use GenServer
 
   # def python_path, do: Mix.Tasks.PythonSetup.python()
@@ -16,13 +18,13 @@ defmodule Python.Server do
     )
   end
 
-  defdelegate python_path(venv_dir), to: Mix.Tasks.PythonSetup
+  defdelegate python_path(venv_dir), to: PythonSetup
 
   # Server (callbacks)
 
   @impl true
   def init(venv_dir) do
-    python_path = venv_dir |> Mix.Tasks.PythonSetup.python_path()
+    python_path = venv_dir |> python_path()
     # Messages are preceded by msg length (4 bytes, big-endian)
     python_port =
       Port.open({:spawn_executable, python_path}, [

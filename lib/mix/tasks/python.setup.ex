@@ -27,16 +27,11 @@ defmodule Mix.Tasks.PythonSetup do
     install(python, venv_dir, pip_pckgs)
   end
 
-  @doc "Create venv, install pip packages."
+  @doc false
+  # Create venv, install pip packages.
   def install(system_python, venv_dir, pip_pckgs) do
-    with {_, 0} <-
-           System.cmd(
-             system_python,
-             ["-m", "venv", venv_dir],
-             stderr_to_stdout: true
-           ),
-         :ok <-
-           install_pip_pckgs(venv_dir, pip_pckgs) do
+    with {_, 0} <- install_venv(system_python, venv_dir),
+         :ok <- install_pip_pckgs(venv_dir, pip_pckgs) do
       :ok
     else
       {out, _ret} ->
@@ -44,7 +39,25 @@ defmodule Mix.Tasks.PythonSetup do
     end
   end
 
-  defp install_pip_pckgs(venv_dir, pip_pckgs) do
+  @doc """
+  Set up venv.
+  """
+  @spec install_venv(binary, binary) :: {binary, integer}
+  def install_venv(system_python, venv_dir) do
+    System.cmd(
+      system_python,
+      ["-m", "venv", venv_dir],
+      stderr_to_stdout: true
+    )
+  end
+
+  @doc """
+  Install pip packages into the venv.
+
+  `pip_pckgs` is directly given to `pip install` as the arguments.
+  """
+  @spec install_pip_pckgs(binary, [binary]) :: :ok | {binary, integer}
+  def install_pip_pckgs(venv_dir, pip_pckgs) do
     case pip_pckgs do
       nil ->
         :ok

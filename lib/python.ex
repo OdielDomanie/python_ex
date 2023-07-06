@@ -2,27 +2,22 @@ defmodule Python do
   @moduledoc """
   Documentation for `PythonEx`.
   """
+  alias Mix.Tasks.PythonSetup
+
   use Application
 
   @impl true
   @spec start(Application.start_type(), [opt]) ::
           {:ok, pid} | {:error, term}
         when opt:
-               {:pip_pckgs, [binary]}
+               {:pip_pckgs, [binary] | nil}
                | {:system_python_path, binary}
                | {:venv_path, binary}
                | {:python_server_name, atom}
   def start(_, args) do
-    # Set up venv
-    system_python =
-      args[:system_python_path] ||
-        System.find_executable("python3")
+    install(args)
 
-    pip_pckgs = args[:pip_pckgs]
     venv_path = args[:venv_path]
-
-    Mix.Tasks.PythonSetup.install(system_python, venv_path, pip_pckgs)
-
     python_server_name = args[:python_server_name] || Python.Server
 
     children = [
@@ -32,6 +27,29 @@ defmodule Python do
     ]
 
     Supervisor.start_link(children, strategy: :one_for_all)
+  end
+
+  @spec install([opt]) ::
+          :ok | {:error, {output :: Collectable.t(), ret_code :: integer}}
+        when opt:
+               {:pip_pckgs, [binary]}
+               | {:system_python_path, binary}
+               | {:venv_path, binary}
+  def install(opts) do
+    system_python =
+      opts[:system_python_path] ||
+        System.find_executable("python3")
+
+    pip_pckgs = opts[:pip_pckgs]
+    venv_path = opts[:venv_path]
+
+    with {_, 0} <- PythonSetup.install_venv(system_python, venv_path),
+         :ok <- PythonSetup.install_pip_pckgs(venv_path, pip_pckgs) do
+      :ok
+    else
+      {_output, _ret_code} = err ->
+        {:error, err}
+    end
   end
 
   @spec apply(
