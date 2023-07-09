@@ -1,14 +1,8 @@
 # PythonEx
 
-Call Python functions from Elixir!
+Call Python functions from Elixir.
 
-**Simple:** This library only ever has just a single function( and an optional GenServer.)
 
-```elixir
-priv_dir = :code.priv_dir(:my_app) |> to_string()
-Python.apply(priv_dir, :my_python_module, :my_echo_fun, "hello")
-# => "hello"
-```
 
 ## Installation
 (Coming soon)
@@ -25,10 +19,25 @@ end
 
 ## Usage
 
+```elixir
+# Set up a python venv
+{:ok, python_path} = Python.install_venv(venv_path, "python3")
+# Install packages via pip
+:ok = Python.install_pip_pckgs(python_path, ["numpy"])
+# Start the server.
+{:ok, pid} = Python.Server.start_link(venv_dir: "venv")
+
+my_python_package = :code.priv_dir(:my_app) |> to_string()
+
+# Call the Python function `my_python_module.my_echo_fun("hello")`
+Python.apply(my_python_package, :my_python_module, :my_echo_fun, "hello")
+# => "hello"
+```
+
 ~~Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc) and published on [HexDocs](https://hexdocs.pm).~~
 Once published, the docs can be found at <https://hexdocs.pm/python_ex>.
 
-When run, the PythonEx app automatically spins up a Python server that handles calls.
+
 
 Use `Python.apply(module_directory, :module_name, :function_name, arg)`
 to call a Python function with a single binary argument.
@@ -36,6 +45,3 @@ to call a Python function with a single binary argument.
 * The module name is in the format of an `import` statement, eg. `:"mypackage.mymodule"`.
 * The function is called with a single `binary`/`bytes` argument,
 * and the Python function is expected to return a `bytes`/`binary` value.
-
-
-Optionally, you can manually start Python Genservers in `Python.Server`.

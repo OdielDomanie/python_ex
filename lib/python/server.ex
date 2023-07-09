@@ -2,29 +2,30 @@ defmodule Python.Server do
   @moduledoc """
   Genserver that spins up a Python server and handles messaging.
   """
-  alias Mix.Tasks.PythonSetup
 
   use GenServer
 
   # def python_path, do: Mix.Tasks.PythonSetup.python()
   @bridge_script :code.priv_dir(:python_ex) |> Path.join("bridge.py")
 
-  @doc false
+  @spec start_link([{:venv_dir, binary} | GenServer.option()]) ::
+          GenServer.on_start()
+  @doc """
+  Start a python server, which maintains its own python process.
+  """
   def start_link(opts) do
     GenServer.start_link(
       __MODULE__,
       opts[:venv_dir],
-      opts ++ [name: __MODULE__]
+      opts
     )
   end
-
-  defdelegate python_path(venv_dir), to: PythonSetup
 
   # Server (callbacks)
 
   @impl true
   def init(venv_dir) do
-    python_path = venv_dir |> python_path()
+    python_path = venv_dir |> Python.python_path()
     # Messages are preceded by msg length (4 bytes, big-endian)
     python_port =
       Port.open({:spawn_executable, python_path}, [

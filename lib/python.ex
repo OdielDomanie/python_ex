@@ -2,53 +2,55 @@ defmodule Python do
   @moduledoc """
   Documentation for `PythonEx`.
   """
-  alias Mix.Tasks.PythonSetup
 
-  use Application
+  @spec install_pip_pckgs(binary, [binary]) :: :ok | {:error, binary}
+  def install_pip_pckgs(python_path, pckgs) do
+    case pckgs do
+      [] ->
+        :ok
 
-  @impl true
-  @spec start(Application.start_type(), [opt]) ::
-          {:ok, pid} | {:error, term}
-        when opt:
-               {:pip_pckgs, [binary] | nil}
-               | {:system_python_path, binary}
-               | {:venv_path, binary}
-               | {:python_server_name, atom}
-  def start(_, args) do
-    install(args)
-
-    venv_path = args[:venv_path]
-    python_server_name = args[:python_server_name] || Python.Server
-
-    children = [
-      Supervisor.child_spec({python_server_name, [venv_dir: venv_path]},
-        restart: :permanent
-      )
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_all)
+      pip_deps ->
+        # Install base pip packages,
+        # then the specified ones,
+        with {_, 0} <-
+               do_pip_install(python_path, ["pip", "wheel", "setuptools"]),
+             {_, 0} <- do_pip_install(python_path, pip_deps) do
+          :ok
+        else
+          {stdout, _ret} -> {:error, stdout}
+        end
+    end
   end
 
-  @spec install([opt]) ::
-          :ok | {:error, {output :: Collectable.t(), ret_code :: integer}}
-        when opt:
-               {:pip_pckgs, [binary]}
-               | {:system_python_path, binary}
-               | {:venv_path, binary}
-  def install(opts) do
-    system_python =
-      opts[:system_python_path] ||
-        System.find_executable("python3")
+  defp do_pip_install(python_path, pckgs) do
+    System.cmd(
+      python_path,
+      [
+        "-m",
+        "pip",
+        "install",
+        #  "--quiet",
+        "--upgrade"
+        | pckgs
+      ],
+      stderr_to_stdout: true
+    )
+  end
 
-    pip_pckgs = opts[:pip_pckgs]
-    venv_path = opts[:venv_path]
+  def python_path(venv_dir), do: Path.join(venv_dir, "bin/python")
 
-    with {_, 0} <- PythonSetup.install_venv(system_python, venv_path),
-         :ok <- PythonSetup.install_pip_pckgs(venv_path, pip_pckgs) do
-      :ok
-    else
-      {_output, _ret_code} = err ->
-        {:error, err}
+  @spec install_venv(binary, binary) :: {:ok, binary} | {:error, binary}
+  def install_venv(venv_path, source_python \\ "python") do
+    source_python = System.find_executable(source_python)
+
+    System.cmd(
+      source_python,
+      ["-m", "venv", venv_path],
+      stderr_to_stdout: true
+    )
+    |> case do
+      {_, 0} -> {:ok, python_path(venv_path)}
+      {stdout, _ret} -> {:error, stdout}
     end
   end
 
@@ -75,7 +77,7 @@ defmodule Python do
         module,
         fun,
         arg,
-        python_server \\ Python.Server,
+        python_server,
         opts \\ [
           queue_timeout: :infinity,
           py_timeout: 5000
